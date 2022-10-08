@@ -1,0 +1,95 @@
+---
+title: "Credit Card Data Modelling"
+author: "Shaik"
+date: "2022-10-05"
+output: word_document
+---
+
+# Part 1
+
+Attacks on client credit cards represents a form of fraud that targets the client bank accounts that replace the direct attack on banks. The use of credit cards allowed for fraudsters to be able to easier target specific individual bank accounts in ways that were not possible when the bank accounts are remotely targeted as a whole. The fraudsters make payments from the victim's credit cards as transactions to other accounts, with the client only realizing the theft later. Through observation of various aspects relating to the client and their transaction history a fraudulent transaction can be identified. In this case, the aim would be the designing of a Decision Tree model for predicting whether a transaction is fraudulent or not. This would allow for the transactions to be flagged and withheld pending confirmation from the client. 
+
+# Part 2
+
+The credit card data was used in the modelling for this case and was collected from https://www.kaggle.com/datasets/mlg-ulb/creditcardfraud. 
+
+# Part 3
+
+The code for the importation of the data is as presented below:
+
+```{r include=FALSE}
+#Loading Packages
+library(tidyverse)
+library(partykit)
+library(funModeling)
+library(caret)
+library(knitr)
+```
+
+```{r}
+#Loading Data
+creditcard = read_csv("creditcard.csv")
+```
+
+# Part 4
+
+The coding for getting the overview and summary of the data is as given below. The overview of the data showed that the data had 31 columns and 284,807 rows. Table 1 below shows that none of the variables in the data had any null entries. The summary statistics for mean, standard deviation, minimum and maximum statistics are presented in Table 2 below for the numeric variables. Additionally, the summary statistics for the frequency of each of the two categories under the Class variables is computed; giving 0 with 284,315 observations and 1 with 492 observations.
+
+```{r}
+#Data Summary
+#Overall
+nrow(creditcard)
+ncol(creditcard)
+status.summary = df_status(creditcard)
+kable(status.summary, caption = "Table 1")
+
+#Summary Statistics Numeric
+summary.data = rbind(creditcard %>% select(-Class) %>% summarise_all(mean), 
+                      creditcard %>% select(-Class) %>% summarise_all(sd),
+                      creditcard %>% select(-Class) %>% summarise_all(max), 
+                      creditcard %>% select(-Class) %>% summarise_all(min))
+t.summary.data = t(summary.data)
+t.summary.data = data.frame(t.summary.data)
+colnames(t.summary.data) = c("mean", "sd", "max", "min")
+kable(t.summary.data, caption = "Table 2")
+
+#Summary Statistics Categorical
+kable(table(creditcard$Class), caption = "Table 3")
+```
+
+# Part 5
+
+The data preparation for the credit card data in this case only involved the changing of the variable type for the categorical variable Class. This variable gives information on whether a transaction was noted as fraudulent = 1, or not = 0. However, Table 1 above shows the variable type for the Class variable as numeric. Below, the code was used in converting the variable type from numeric to factor to enable use in the Decision Tree modelling. 
+
+```{r}
+#Data Preparation 
+#Setting the Class variable as a factor
+creditcard$Class = factor(creditcard$Class)
+```
+
+# Part 6
+
+The modelling approach for the credit card fraud data applied in this case is the Decision Tree modelling. The model utilizes a tree like structure in the prediction of the possible outcome. The modelling process used the entire data set as the training data for the model. All the variables in the data were used for modelling the outcome variable, Class. The model was then plotted into a tree for the visualization. Finally, the model accuracy was evaluated with the new data set being the original data. 
+
+# Part 7 and Part 8
+
+The visual output of the Decision Tree modelling is as presented below in Figure 1. From the tree at the top level on node 1 the transactions are separated based on the V17 variable into those where V17 is less than or equal to -1.35 and those that have V17 greater than -1.35. On the second level of tree, there are two nodes; for V12 and V14. At this level the transactions that have V17 less than or equal to -1.35 are further divided into 2 groups based on V12 for those with V12 less than or equal to -2.21 and those where v12 is greater than -2.21. On the other hand, at the same level, the transactions that have V17 greater than -1.35 are also further divided into 2 groups based on V14 for those with V14 less than or equal to -2.602 and those where v12 is greater than -2.602. This classification process continues down the tree until the final classification for the Class, as either 0 or 1. 
+
+The results below also show the confusion matrix for the predictive performance of the model. The output from the confusion matrix shows that the prediction accuracy of the Decision Tree model is 99.96%. This implies that the model correctly predicted the Class level for 99.96% of the transactions in the same data used in the training. Based on the training data, the model has a good predictive performance.
+
+```{r fig.height=8, fig.width=12, fig.cap="Figure 1"}
+#Modelling 
+Decision.Tree = ctree(Class~., data = creditcard)
+plot(Decision.Tree)
+Decision.Tree[1]
+#Model Accuracy
+Predict.data = predict(Decision.Tree, newdata = creditcard[,-31], type = "prob")
+Predict.data = data.frame(Predict.data)
+Predict.data = Predict.data %>% mutate(Prediction = ifelse(X0 > X1, 0, 1))
+Predict.data$Prediction = factor(Predict.data$Prediction)
+#Checking model accuracy 
+confusionMatrix(table(Predict.data$Prediction, creditcard$Class), positive = "1")
+
+```
+
+
